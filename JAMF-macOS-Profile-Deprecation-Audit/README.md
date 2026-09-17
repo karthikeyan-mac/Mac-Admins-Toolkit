@@ -183,12 +183,6 @@ Check Bash syntax:
 bash -n ./jamf-macos-profile-deprecation-audit.sh
 ```
 
-Run ShellCheck when available:
-
-```bash
-shellcheck ./jamf-macos-profile-deprecation-audit.sh
-```
-
 For functional testing, use a non-production Jamf Pro tenant containing representative profiles, including:
 
 - PPPC Accessibility with `Allow`
