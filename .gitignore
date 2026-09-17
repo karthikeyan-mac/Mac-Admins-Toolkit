@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Claude Code / Codex local configuration - NEVER COMMIT
+AGENTS.md
+CLAUDE.md
+.codex/
+.claude/
+.codex*
+.claude*
+
+# Secrets and local configuration
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+
+# Local logs and test output
+*.log
+coverage/
+.tmp/
