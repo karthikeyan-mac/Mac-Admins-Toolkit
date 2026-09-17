@@ -31,4 +31,4 @@ Apple Enterprise & Device Management
 
 ## License
 
-Licensed under the **MIT License**. See `LICENSE` for details.
+This project is available under the **MIT License**. See [LICENSE](LICENSE) for details.
