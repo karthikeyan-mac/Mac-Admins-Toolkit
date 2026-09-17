@@ -1,56 +1,96 @@
-# Mac Admin Toolkit
+# Mac Admins Toolkit
 
-Practical **macOS administration scripts, MDM utilities, Jamf Pro tools, Extension Attributes, and automation** for Apple device management.
+A collection of practical **macOS administration scripts, MDM utilities, Jamf Pro tools, Extension Attributes, and automation** for Apple device management.
 
-The toolkit includes both **MDM-agnostic tools** and platform-specific utilities where required.
+The repository includes both **MDM-agnostic scripts** and tools designed for specific management platforms such as Jamf Pro.
 
-> Independent project. Not affiliated with or endorsed by Apple, Jamf, Microsoft, Kandji, VMware, or any other vendor.
+---
 
-## macOS Support
+## Requirements
 
-Scripts should target **macOS 15 Sequoia, macOS 26 Tahoe, and macOS 27 Golden Gate**, unless a tool states otherwise. Individual tools should document any OS, architecture, or feature limitations.
+Requirements vary by script or tool.
 
-## Clone
+Scripts are developed with the following macOS versions in mind:
+
+- macOS 27
+- macOS 26
+- macOS 15
+
+Check the documentation and comments included with each script for specific requirements, dependencies, permissions, and MDM requirements.
+
+---
+
+## Disclaimer
+
+Some scripts in this repository may have been developed or refined with the assistance of AI tools.
+
+**Review and understand every script before running it. Always test thoroughly in a non-production environment before deploying to production devices.**
+
+Compatibility with the macOS versions listed above is a development target and does not mean every script has been tested against every macOS version, Mac model, architecture, MDM platform, or configuration.
+
+Use these tools at your own risk and validate them against your organisation's requirements and security policies.
+
+---
+
+## Installation
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/karthikeyan-mac/Mac-Admins-Toolkit.git
 cd Mac-Admins-Toolkit
 ```
 
-## Use
+Browse to the required tool or script and review its documentation before use.
 
-Review the script documentation and comments before deployment, then run the required script directly or deploy it through your MDM platform.
-
-For example:
+To update an existing clone:
 
 ```bash
-bash path/to/script.sh
+git pull
 ```
 
-Scripts should document any required permissions, dependencies, parameters, MDM requirements, and expected output.
+---
+
+## Usage
+
+Scripts may be used directly on macOS or deployed through an MDM platform, depending on their purpose.
+
+Before using a script:
+
+1. Read the script and its documentation.
+2. Check any required variables, parameters, permissions, or dependencies.
+3. Test on a non-production Mac.
+4. Validate the expected result.
+5. Deploy to production only after successful testing.
+
+---
 
 ## Security
 
-Never commit passwords, API tokens, client secrets, private keys, certificates containing private material, `.env` files with secrets, or sensitive organisation/device data.
+Never add credentials, passwords, API tokens, client secrets, private keys, certificates, or organisation-specific sensitive information directly to scripts.
 
+**Always review your changes before committing or pushing to a remote Git repository to ensure credentials or sensitive information have not been included accidentally.**
 
-## Disclaimer
+If a credential is accidentally committed or pushed, consider it exposed and rotate or revoke it immediately.
 
-The scripts and tools in this repository are provided **as-is**, without warranty of any kind.
+---
 
-Scripts may make system, configuration, security, or device-management changes. **Review and understand the code before running it.**
+## Issues
 
-Always test scripts in a **non-production environment** and validate compatibility with your macOS version, MDM platform, security controls, and organisational requirements before production deployment.
+Found a bug or something that doesn't work as expected?
 
-Compatibility with listed macOS versions is a development target and should **not be considered a guarantee** that every script has been tested against every macOS release, hardware configuration, or MDM environment.
+Please open an issue with details about the script, macOS version, MDM platform (if applicable), and the behaviour you observed.
 
-You are responsible for evaluating, testing, and validating these tools before use in your environment.
+---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+MIT — see `LICENSE`.
+
+---
 
 ## Author
 
-**Karthikeyan Marappan**  
+Developed by **Karthikeyan Marappan**
+
 Apple Enterprise & Device Management
