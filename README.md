@@ -43,12 +43,6 @@ cd Mac-Admins-Toolkit
 
 Browse to the required tool or script and review its documentation before use.
 
-To update an existing clone:
-
-```bash
-git pull
-```
-
 ---
 
 ## Usage
@@ -89,8 +83,5 @@ MIT — see `LICENSE`.
 
 ---
 
-## Author
 
-Developed by **Karthikeyan Marappan**
-
-Apple Enterprise & Device Management
+[Karthikeyan Marappan](https://www.linkedin.com/in/bewithkarthi/)
