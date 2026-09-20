@@ -2,7 +2,12 @@
 
 `create-jamfscopemap-api-role.sh` creates (or updates) the read-only Jamf Pro API Role that [ScopeMap](https://github.com/Jamf-Concepts/scope-map) needs, and can optionally create an API Client bound to that role.
 
-Script version: `1.0.0` (see `SCRIPT_VERSION` in the script). Every run prints `script name - version` as its first line.
+Script version: `1.1.0` (see `SCRIPT_VERSION` in the script). Every run prints `script name - version` as its first line.
+
+## What changed in 1.1.0
+
+- With `CREATE_CLIENT=yes` the API Client is now named the same as the role, and `CLIENT_NAME` is gone.
+- No duplicate clients: if a client with that name, or any client already assigned the role, exists, no new one is created.
 
 ## Compatibility
 
@@ -43,16 +48,15 @@ Environment selection (`JAMF_ENV`), the value order, the prod `PROD` confirmatio
 | `JAMF_PASS` | `DevAdminPassword` / `ProdAdminPassword` | Administrator password | none |
 | `JAMF_CLIENT_ID` / `JAMF_CLIENT_SECRET` | `Dev`/`Prod` `APIClientID` / `APIClientSecret` | Fallback API Client, used if no username is given; must already hold every privilege being assigned | none |
 | `ROLE_NAME` | `ScopeMapRoleName` | API Role name | `ScopeMap Read-Only` |
-| `CREATE_CLIENT` | `ScopeMapCreateClient` | `yes` also creates an API Client | `no` |
-| `CLIENT_NAME` | `ScopeMapClientName` | API Client display name | `ScopeMap` |
+| `CREATE_CLIENT` | `ScopeMapCreateClient` | `yes` also creates an API Client, named the same as the role | `no` |
 | `DRY_RUN` | (not read) | `yes` changes nothing | `yes` |
 
-The script default wins over the plist, so the last three plist keys only take effect if you blank that default in the script. A real run needs `DRY_RUN=no`.
+The script default wins over the plist, so the `ScopeMap` plist keys only take effect if you blank that default in the script. A real run needs `DRY_RUN=no`.
 
 ## Limitations
 
 - Blueprints and Compliance use Jamf Platform scopes and can't be set through an API Role.
-- With `CREATE_CLIENT=yes` a new API Client is created on every run, so run it once. The client secret is printed once and not stored.
+- With `CREATE_CLIENT=yes` the API Client gets the same name as the role. If a client with that name, or any client already assigned this role, exists, no new one is created. The secret of a client that already exists can't be shown again; delete it in Jamf Pro first if you need a new one. The secret of a new client is printed once and not stored.
 - Privilege names are checked against your server before any change; if Jamf renames one, the run stops and lists it.
 
 ## Testing

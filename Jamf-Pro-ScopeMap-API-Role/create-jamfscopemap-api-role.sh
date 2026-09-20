@@ -46,11 +46,11 @@
 #          Prod keys: ProdServerURL, ProdAdminUsername, ProdAdminPassword,
 #                     ProdAPIClientID, ProdAPIClientSecret
 #          Shared keys (both environments): ScopeMapRoleName,
-#            ScopeMapClientName, ScopeMapCreateClient
+#            ScopeMapCreateClient
 #          Created by a Jamf admin, e.g.
 #            defaults write com.karthikmac.macadminstoolkit DevServerURL -string "https://..."
 #          NOTE: this file is plain text. Keep it chmod 600 on admin Macs only.
-#          Because ROLE_NAME, CLIENT_NAME and CREATE_CLIENT have script
+#          Because ROLE_NAME and CREATE_CLIENT have script
 #          defaults, their plist keys only apply if you blank the default.
 #     4) a prompt: anything still missing is asked for on an interactive
 #        terminal. Password, client ID and client secret are typed/pasted with
@@ -64,12 +64,15 @@
 # - Fallback only: JAMF_CLIENT_ID + JAMF_CLIENT_SECRET (an API Client). This
 #   only works if that client already holds every privilege being assigned.
 # - Optional overrides (environment): ROLE_NAME, CREATE_CLIENT (yes|no),
-#   CLIENT_NAME, DRY_RUN (yes|no).
+#   DRY_RUN (yes|no).
+# - CREATE_CLIENT=yes creates an API Client with the SAME name as the role. If
+#   a client with that name, or any client already assigned this role, exists,
+#   no new client is created (an existing client's secret can't be shown again).
 #
 # *** Test against a non-production Jamf Pro environment first. ***
 
 SCRIPT_NAME="create-jamfscopemap-api-role.sh"
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 
 set -euo pipefail
 umask 077
@@ -83,8 +86,7 @@ echo "$SCRIPT_NAME - $SCRIPT_VERSION"
 SCRIPT_JAMF_ENV=""                       # prod | dev ; empty = ask (JAMF_ENV overrides)
 SCRIPT_JAMF_URL=""                       # e.g. https://yourorg.jamfcloud.com
 SCRIPT_ROLE_NAME="ScopeMap Read-Only"    # name of the API Role to create/update
-SCRIPT_CREATE_CLIENT="yes"                # yes = also create an API Client + secret
-SCRIPT_CLIENT_NAME="ScopeMap"            # display name of the API Client (if created)
+SCRIPT_CREATE_CLIENT="no"                 # yes = also create an API Client + secret
 SCRIPT_DRY_RUN="no"                     # yes = validate + print payload only
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
@@ -149,7 +151,6 @@ loadSetting JAMF_CLIENT_ID "${ENV_PREFIX}APIClientID"
 loadSetting JAMF_CLIENT_SECRET "${ENV_PREFIX}APIClientSecret"
 loadSetting ROLE_NAME ScopeMapRoleName "$SCRIPT_ROLE_NAME"
 loadSetting CREATE_CLIENT ScopeMapCreateClient "$SCRIPT_CREATE_CLIENT"
-loadSetting CLIENT_NAME ScopeMapClientName "$SCRIPT_CLIENT_NAME"
 JAMF_URL="${JAMF_URL%/}"
 DRY_RUN="${DRY_RUN:-$SCRIPT_DRY_RUN}"
 TOKEN=""
@@ -431,20 +432,41 @@ else
 fi
 
 # --- Optionally create an API Client bound to the role -----------------------
+# The API Client is named after the role. Creating one on every run would pile up
+# duplicates, so look first: skip if a client has that name or already uses this
+# role. If the list can't be read as expected, stop rather than guess.
 if [[ "$CREATE_CLIENT" == "yes" ]]; then
-	client_body=$(jq -n --arg n "$CLIENT_NAME" --arg r "$ROLE_NAME" \
-		'{displayName: $n, enabled: true, accessTokenLifetimeSeconds: 1800, authorizationScopes: [$r]}')
-	client=$(api POST "/api/v1/api-integrations" "$client_body")
-	int_id=$(jq -r '.id' <<<"$client")
-	client_id=$(jq -r '.clientId' <<<"$client")
-	creds=$(api POST "/api/v1/api-integrations/$int_id/client-credentials")
-	echo
-	echo "API Client created: $CLIENT_NAME"
-	echo "  Jamf URL     : $JAMF_URL"
-	echo "  Client ID    : $client_id"
-	# The secret is shown once by design; save it to a password manager now.
-	echo "  Client Secret: $(jq -r '.clientSecret' <<<"$creds")"
-	echo "  (Save the secret now; it is not shown again.)"
+	clients=$(api GET "/api/v1/api-integrations")
+	existing_clients=$(jq -c --arg n "$ROLE_NAME" '
+		(if type == "array" then .
+		 elif type == "object" and (.results | type) == "array" then .results
+		 else error("unexpected response") end)
+		| [ .[] | select(.displayName == $n or ((.authorizationScopes // []) | index($n))) ]
+	' <<<"$clients" 2>/dev/null) || {
+		echo "ERROR: Unexpected response listing API Clients; not creating one to avoid a duplicate." >&2
+		exit 1
+	}
+	if [[ "$(jq 'length' <<<"$existing_clients")" -gt 0 ]]; then
+		echo
+		echo "API Client already exists for role '$ROLE_NAME'; not creating another:"
+		jq -r '.[] | "  \(.displayName) (id \(.id))"' <<<"$existing_clients"
+		echo "  (An existing client's secret can't be shown again. Delete the client in"
+		echo "   Jamf Pro first if you need a new one.)"
+	else
+		client_body=$(jq -n --arg n "$ROLE_NAME" \
+			'{displayName: $n, enabled: true, accessTokenLifetimeSeconds: 1800, authorizationScopes: [$n]}')
+		client=$(api POST "/api/v1/api-integrations" "$client_body")
+		int_id=$(jq -r '.id' <<<"$client")
+		client_id=$(jq -r '.clientId' <<<"$client")
+		creds=$(api POST "/api/v1/api-integrations/$int_id/client-credentials")
+		echo
+		echo "API Client created: $ROLE_NAME"
+		echo "  Jamf URL     : $JAMF_URL"
+		echo "  Client ID    : $client_id"
+		# The secret is shown once by design; save it to a password manager now.
+		echo "  Client Secret: $(jq -r '.clientSecret' <<<"$creds")"
+		echo "  (Save the secret now; it is not shown again.)"
+	fi
 fi
 
 echo
