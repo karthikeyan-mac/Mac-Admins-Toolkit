@@ -47,8 +47,8 @@ Environment selection (`JAMF_ENV`), the value order, the prod `PROD` confirmatio
 | `JAMF_USER` | `DevAdminUsername` / `ProdAdminUsername` | Administrator account | none |
 | `JAMF_PASS` | `DevAdminPassword` / `ProdAdminPassword` | Administrator password | none |
 | `JAMF_CLIENT_ID` / `JAMF_CLIENT_SECRET` | `Dev`/`Prod` `APIClientID` / `APIClientSecret` | Fallback API Client, used if no username is given; must already hold every privilege being assigned | none |
-| `ROLE_NAME` | `ScopeMapRoleName` | API Role name | `ScopeMap Read-Only` |
-| `CREATE_CLIENT` | `ScopeMapCreateClient` | `yes` also creates an API Client, named the same as the role | `no` |
+| `ROLE_NAME` | `ScopeMapRoleName` | API Role name | `ScopeMap Read-Only_DEV` |
+| `CREATE_CLIENT` | `ScopeMapCreateClient` | `yes` also creates an API Client, named the same as the role | `yes` |
 | `DRY_RUN` | (not read) | `yes` changes nothing | `yes` |
 
 The script default wins over the plist, so the `ScopeMap` plist keys only take effect if you blank that default in the script. A real run needs `DRY_RUN=no`.

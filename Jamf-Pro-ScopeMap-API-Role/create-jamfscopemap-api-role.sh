@@ -85,8 +85,8 @@ echo "$SCRIPT_NAME - $SCRIPT_VERSION"
 # prompt. Keep secrets out of this file.
 SCRIPT_JAMF_ENV=""                       # prod | dev ; empty = ask (JAMF_ENV overrides)
 SCRIPT_JAMF_URL=""                       # e.g. https://yourorg.jamfcloud.com
-SCRIPT_ROLE_NAME="ScopeMap Read-Only"    # name of the API Role to create/update
-SCRIPT_CREATE_CLIENT="no"                 # yes = also create an API Client + secret
+SCRIPT_ROLE_NAME="ScopeMap Read-Only_DEV"    # name of the API Role to create/update
+SCRIPT_CREATE_CLIENT="yes"                # yes = also create an API Client + secret
 SCRIPT_DRY_RUN="no"                     # yes = validate + print payload only
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
