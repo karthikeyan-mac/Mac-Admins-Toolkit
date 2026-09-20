@@ -50,8 +50,10 @@
 #          Created by a Jamf admin, e.g.
 #            defaults write com.karthikmac.macadminstoolkit DevServerURL -string "https://..."
 #          NOTE: this file is plain text. Keep it chmod 600 on admin Macs only.
-#          Because ROLE_NAME and CREATE_CLIENT have script
-#          defaults, their plist keys only apply if you blank the default.
+#          ROLE_NAME has no script default, so it is prompted for unless set
+#          by environment, hardcoded in SCRIPT_ROLE_NAME, or in the plist.
+#          CREATE_CLIENT has a script default, so its plist key only applies
+#          if you blank that default.
 #     4) a prompt: anything still missing is asked for on an interactive
 #        terminal. Password, client ID and client secret are typed/pasted with
 #        no echo. Non-interactive runs fail if a value is missing.
@@ -72,7 +74,7 @@
 # *** Test against a non-production Jamf Pro environment first. ***
 
 SCRIPT_NAME="create-jamfscopemap-api-role.sh"
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="1.2.0"
 
 set -euo pipefail
 umask 077
@@ -85,9 +87,9 @@ echo "$SCRIPT_NAME - $SCRIPT_VERSION"
 # prompt. Keep secrets out of this file.
 SCRIPT_JAMF_ENV=""                       # prod | dev ; empty = ask (JAMF_ENV overrides)
 SCRIPT_JAMF_URL=""                       # e.g. https://yourorg.jamfcloud.com
-SCRIPT_ROLE_NAME="ScopeMap Read-Only_DEV"    # name of the API Role to create/update
+SCRIPT_ROLE_NAME=""                      # name of the API Role to create/update ; empty = ask
 SCRIPT_CREATE_CLIENT="yes"                # yes = also create an API Client + secret
-SCRIPT_DRY_RUN="no"                     # yes = validate + print payload only
+SCRIPT_DRY_RUN="yes"                    # yes = validate + print payload only
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
 # DRY_RUN is deliberately NOT read from it, so a stored value can never turn a
@@ -187,6 +189,7 @@ promptValue() {
 
 promptValue JAMF_URL "Jamf Pro URL (e.g. https://yourorg.jamfcloud.com)"
 JAMF_URL="${JAMF_URL%/}"
+promptValue ROLE_NAME "API Role name (e.g. ScopeMap Read-Only)"
 # Prefer an Administrator account; a blank username falls back to an API Client.
 if [[ -z "$JAMF_USER" && -z "$JAMF_CLIENT_ID" && -z "$JAMF_CLIENT_SECRET" ]]; then
 	promptValue JAMF_USER "Jamf Pro username (leave blank to use an API Client instead)"
@@ -203,7 +206,7 @@ fi
 [[ "$JAMF_URL" == https://* ]] || { echo "ERROR: JAMF_URL must start with https://" >&2; exit 1; }
 [[ "$CREATE_CLIENT" == "yes" || "$CREATE_CLIENT" == "no" ]] || { echo "ERROR: CREATE_CLIENT must be yes or no." >&2; exit 1; }
 [[ "$DRY_RUN" == "yes" || "$DRY_RUN" == "no" ]] || { echo "ERROR: DRY_RUN must be yes or no." >&2; exit 1; }
-[[ -n "$ROLE_NAME" ]] || { echo "ERROR: ROLE_NAME must not be empty." >&2; exit 1; }
+[[ -n "$ROLE_NAME" ]] || { echo "ERROR: Set ROLE_NAME (the API Role name)." >&2; exit 1; }
 command -v curl >/dev/null || { echo "ERROR: curl is required." >&2; exit 1; }
 command -v jq >/dev/null || { echo "ERROR: jq is required (included with macOS 15 and later)." >&2; exit 1; }
 

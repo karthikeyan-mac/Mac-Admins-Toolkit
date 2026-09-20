@@ -2,9 +2,13 @@
 
 `create-jamfscopemap-api-role.sh` creates (or updates) the read-only Jamf Pro API Role that [ScopeMap](https://github.com/Jamf-Concepts/scope-map) needs, and can optionally create an API Client bound to that role.
 
-Script version: `1.1.0` (see `SCRIPT_VERSION` in the script). Every run prints `script name - version` as its first line.
+Script version: `1.2.0` (see `SCRIPT_VERSION` in the script). Every run prints `script name - version` as its first line.
 
-## What changed in 1.1.0
+## What changed
+
+- **1.2.0:** the role name has no built-in default. It is used if set (`ROLE_NAME`, `SCRIPT_ROLE_NAME` in the script, or the plist), otherwise you are prompted for it.
+
+**1.1.0**
 
 - With `CREATE_CLIENT=yes` the API Client is now named the same as the role, and `CLIENT_NAME` is gone.
 - No duplicate clients: if a client with that name, or any client already assigned the role, exists, no new one is created.
@@ -47,11 +51,11 @@ Environment selection (`JAMF_ENV`), the value order, the prod `PROD` confirmatio
 | `JAMF_USER` | `DevAdminUsername` / `ProdAdminUsername` | Administrator account | none |
 | `JAMF_PASS` | `DevAdminPassword` / `ProdAdminPassword` | Administrator password | none |
 | `JAMF_CLIENT_ID` / `JAMF_CLIENT_SECRET` | `Dev`/`Prod` `APIClientID` / `APIClientSecret` | Fallback API Client, used if no username is given; must already hold every privilege being assigned | none |
-| `ROLE_NAME` | `ScopeMapRoleName` | API Role name | `ScopeMap Read-Only_DEV` |
+| `ROLE_NAME` | `ScopeMapRoleName` | API Role name (also used as the API Client name) | none (prompted) |
 | `CREATE_CLIENT` | `ScopeMapCreateClient` | `yes` also creates an API Client, named the same as the role | `yes` |
 | `DRY_RUN` | (not read) | `yes` changes nothing | `yes` |
 
-The script default wins over the plist, so the `ScopeMap` plist keys only take effect if you blank that default in the script. A real run needs `DRY_RUN=no`.
+`CREATE_CLIENT` has a script default that wins over the plist, so `ScopeMapCreateClient` only takes effect if you blank that default in the script. A real run needs `DRY_RUN=no`.
 
 ## Limitations
 
