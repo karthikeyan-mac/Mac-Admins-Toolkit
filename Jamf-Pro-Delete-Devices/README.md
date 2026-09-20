@@ -2,12 +2,19 @@
 
 `delete-devices-by-serial.sh` deletes computer or mobile device records from Jamf Pro, one serial number per line from a text file.
 
-Script version: `1.0.0` (see `SCRIPT_VERSION` in the script). Every run logs the script version on its first line.
+Script version: `2.0.0` (see `SCRIPT_VERSION` in the script). Every run prints `script name - version` as its first line.
+
+## What changed in 2.0.0
+
+- **`DRY_RUN` defaults to `yes`.** The script reports what it would delete and deletes nothing. Set `DRY_RUN=no` to delete.
+- **An environment is required:** `prod` or `dev` (`JAMF_ENV`, or a prompt). Prod shows a warning and asks you to type `PROD`.
+- Values can come from a prompt or the shared plist. The old script-level URL placeholder is gone.
 
 ## Compatibility
 
 - macOS 15 Sequoia, macOS 26 Tahoe, and macOS 27 Golden Gate (the toolkit's general targets); the script only calls `curl`/`plutil`, so no OS-specific behavior is expected.
 - Jamf Pro with API Client (client-credentials) OAuth support and the `/v4/computers-inventory` endpoints.
+- Runs from a terminal on an admin Mac. It is not a Jamf policy script and does not use policy parameters.
 
 ## Requirements
 
@@ -23,47 +30,48 @@ Create an API Role with:
 - **Read Mobile Devices**
 - **Delete Mobile Devices**
 
-One role covering both device types, since `DEVICE_TYPE` can be switched without regenerating the API Client.
+One role covering both device types, since `DEVICE_TYPE` can be switched without regenerating the API Client. The read privileges are also what the dry run uses.
 
 Never commit a real client secret to this repository. Treat any exposed secret as compromised and rotate it in Jamf Pro.
 
 ## Configuration
 
-Environment variables override the script-level defaults:
+Environment selection (`JAMF_ENV`), the value order, the prod `PROD` confirmation, the URL guard, the optional plist and the output lines are shared by the Jamf Pro API tools. See [Jamf Pro API tools: shared configuration](../README.md#jamf-pro-api-tools-shared-configuration). This tool uses the API Client keys (`ServerURL`, `APIClientID`, `APIClientSecret`, each with a `Dev` or `Prod` prefix).
+
+Tool settings (environment variables, then script default):
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `JAMF_URL` | Jamf Pro base URL, including `https://` | Script-level placeholder |
-| `JAMF_CLIENT_ID` | Jamf Pro API Client ID | Script-level placeholder |
-| `JAMF_CLIENT_SECRET` | Jamf Pro API Client secret | Script value, then interactive prompt |
-| `DEVICE_TYPE` | `computer` or `mobile` | `mobile` |
+| `DEVICE_TYPE` | `computer` or `mobile` | `computer` |
 | `SERIAL_LIST` | Path to the serial number text file (one per line) | `~/Desktop/serialNumber.txt` |
 | `LOG_FILE` | Path to the run log | `~/Library/Logs/jamf_delete_devices.log` |
-
-`https://karthikeyan.jamfcloud.com` and `your-api-client-id` are placeholders and are deliberately rejected — replace them locally or provide `JAMF_URL` / `JAMF_CLIENT_ID` through the environment.
+| `DRY_RUN` | `yes` reports only, `no` deletes | `yes` |
 
 ## Usage
 
 ```bash
-export JAMF_URL="https://your-instance.jamfcloud.com"
-export JAMF_CLIENT_ID="your-api-client-id"
+export JAMF_ENV="dev"
 export DEVICE_TYPE="mobile"
 export SERIAL_LIST="$HOME/Desktop/serialNumber.txt"
 
+# Dry run (default): shows what would be deleted
 ./delete-devices-by-serial.sh
+
+# Real run
+DRY_RUN=no ./delete-devices-by-serial.sh
 ```
 
-The script prompts for `JAMF_CLIENT_SECRET` without echoing it if not already exported, and refuses to run non-interactively without one.
+Anything not set (URL, client ID, client secret) is prompted for; the client ID and secret are entered with no echo.
 
 ## How it works
 
 - **`computer`**: looks up the Jamf Pro ID via `GET /api/v4/computers-inventory` filtered by serial number, then deletes with `DELETE /api/v4/computers-inventory/{id}` (the modern Jamf Pro API; the Classic API's serial-number delete was deprecated by Jamf on 2025-02-11, and the v1-v3 `computers-inventory` GET endpoints are deprecated as well, so v4 is used throughout).
-- **`mobile`**: deletes with `DELETE /JSSResource/mobiledevices/serialnumber/{serial}` (Classic API). Jamf Pro has no modern, non-Classic delete endpoint for mobile devices as of this writing.
+- **`mobile`**: deletes with `DELETE /JSSResource/mobiledevices/serialnumber/{serial}` (Classic API). Jamf Pro has no modern, non-Classic delete endpoint for mobile devices as of this writing. The dry run checks existence with `GET` on the same Classic path.
 - The access token is invalidated from an `EXIT` trap on both success and failure.
 
 ## Output
 
-A summary is always printed and appended to `LOG_FILE` (and stdout) at the end of the run — counts and lists of successfully and unsuccessfully deleted serial numbers — even if the run stopped early (e.g. an unauthorized API role or an unexpected error partway through the list). In that case the summary also includes a "Run stopped early. Reason: ..." line.
+A summary is always printed and appended to `LOG_FILE` (and stdout) at the end of the run: counts and lists of successfully and unsuccessfully processed serial numbers. In a dry run the counts read "Would delete" and nothing is deleted. The summary is printed even if the run stopped early (e.g. an unauthorized API role or an unexpected error partway through the list), and then includes a "Run stopped early. Reason: ..." line.
 
 ## Testing
 
@@ -72,11 +80,11 @@ bash -n ./delete-devices-by-serial.sh
 shellcheck ./delete-devices-by-serial.sh
 ```
 
-Both pass clean as of this revision. Test against a non-production Jamf Pro tenant before any production use — this script has not been run against a live Jamf Pro tenant as part of preparing this revision.
+Both pass clean as of this revision. Test against a non-production Jamf Pro tenant before any production use. This revision was exercised only against a local mock of the Jamf Pro API, not a live tenant.
 
 ## Limitations
 
-- Deletion is permanent; there is no confirmation prompt or dry-run mode.
+- Deletion is permanent. Run the dry run first, and check the serial list.
 - `computer` lookups match on exact serial number; a serial not yet present in Jamf Pro inventory (e.g. immediately after enrollment) is reported as "Not found."
 - `mobile` deletion depends on the Jamf Pro Classic API, since no modern replacement endpoint exists yet.
 - `curl --retry` only retries connection-level failures and a small set of 5xx/429 responses before a response is received; it never re-sends a request that already got a definitive result.

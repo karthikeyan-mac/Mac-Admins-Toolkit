@@ -34,75 +34,31 @@ Never commit a real client secret to this repository. Treat any committed or oth
 
 ## Configuration
 
-Environment variables take precedence over the corresponding script-level values.
+Environment selection (`JAMF_ENV`), the value order, the prod `PROD` confirmation, the URL guard, the optional plist and the output lines are shared by the Jamf Pro API tools. See [Jamf Pro API tools: shared configuration](../README.md#jamf-pro-api-tools-shared-configuration). This tool uses the API Client keys (`ServerURL`, `APIClientID`, `APIClientSecret`, each with a `Dev` or `Prod` prefix).
+
+Tool settings (environment variables):
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `JAMF_URL` | Jamf Pro base URL, including `https://` | Script-level placeholder |
-| `JAMF_CLIENT_ID` | Jamf Pro API Client ID | Script-level placeholder |
-| `JAMF_CLIENT_SECRET` | Jamf Pro API Client secret | Script value, then interactive prompt |
 | `OUTPUT_DIR` | Directory for the CSV report | Current working directory |
 | `DEBUG` | Set to `1` to print failed Jamf response bodies | `0` |
 
-The script-level configuration is near the beginning of the script:
-
-```bash
-SCRIPT_JAMF_URL="https://karthikeyan.jamfcloud.com"
-SCRIPT_JAMF_CLIENT_ID="your-api-client-id"
-SCRIPT_JAMF_CLIENT_SECRET=""
-```
-
-`https://karthikeyan.jamfcloud.com` is a placeholder and is deliberately rejected. Replace it locally or provide `JAMF_URL` through the environment.
-
-Keep `SCRIPT_JAMF_CLIENT_SECRET` empty in committed and shared copies. For unattended execution, provide the secret through the deployment system's protected secret store.
+The script is read-only, so it has no `DRY_RUN`. Selecting `prod` still shows the warning and asks for `PROD`.
 
 ## Usage
 
-Make the script executable if required:
+Run it from a terminal on an admin Mac. It is not a Jamf policy script and does not use policy parameters.
 
 ```bash
 chmod 700 ./jamf-macos-profile-deprecation-audit.sh
-```
 
-### Interactive execution
-
-Set the non-secret values and start the script. It prompts for the secret without echoing it:
-
-```bash
-export JAMF_URL="https://your-instance.jamfcloud.com"
-export JAMF_CLIENT_ID="your-api-client-id"
+export JAMF_ENV="dev"
 export OUTPUT_DIR="$(pwd)"
 
 ./jamf-macos-profile-deprecation-audit.sh
 ```
 
-The script uses Bash through its shebang, so its built-in secret prompt works when launched from either Zsh or Bash.
-
-### Supply the secret from Zsh
-
-```zsh
-read -r -s "JAMF_CLIENT_SECRET?Jamf API client secret: "
-printf '\n'
-export JAMF_CLIENT_SECRET
-
-./jamf-macos-profile-deprecation-audit.sh
-
-unset JAMF_CLIENT_SECRET
-```
-
-### Supply the secret from Bash
-
-```bash
-read -r -s -p "Jamf API client secret: " JAMF_CLIENT_SECRET
-printf '\n'
-export JAMF_CLIENT_SECRET
-
-./jamf-macos-profile-deprecation-audit.sh
-
-unset JAMF_CLIENT_SECRET
-```
-
-Do not put a real secret directly on a command line because it may be retained in shell history or exposed to process inspection.
+Anything not set (URL, client ID, client secret) is prompted for; the client ID and secret are entered with no echo. Do not put a real secret directly on a command line because it may be retained in shell history or exposed to process inspection. The access token is invalidated when the script exits.
 
 ## Audit rules
 
@@ -122,9 +78,12 @@ The software-update deferral check includes generic, major OS, minor OS, and non
 
 ## Output
 
-The first log line identifies the Jamf Pro tenant being audited:
+The first line is `script name - version`, followed by the environment and where each setting came from (never the values), then the Jamf Pro tenant being audited:
 
 ```text
+jamf-macos-profile-deprecation-audit.sh - 2.0.0
+Environment: dev (from JAMF_ENV variable). Settings sources (...):
+  JAMF_URL=plist, JAMF_CLIENT_ID=plist, JAMF_CLIENT_SECRET=plist
 Jamf Pro URL: https://your-instance.jamfcloud.com
 ```
 
@@ -149,7 +108,7 @@ Findings by status:
   Removed in macOS 27                          5
 
 CSV report:            /path/jamf-deprecated-mdm-audit.csv
-Script version:        1.0.0
+Script version:        2.0.0
 Rule set:              macOS-27.2026-09-17
 ============================================================
 ```
@@ -199,6 +158,7 @@ Verify that Accessibility grants and non-grant rules receive different statuses,
 
 - Exit `0`: the audit completed and the CSV was written successfully.
 - Exit `1`: configuration, authentication, API, XML, plist, or output validation failed.
+- Exit `0` with "Cancelled": you did not type `PROD` at the production prompt, so nothing ran.
 
 A successful audit with zero findings still exits `0` and produces a header-only CSV.
 

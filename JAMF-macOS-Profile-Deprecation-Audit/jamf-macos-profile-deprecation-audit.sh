@@ -5,44 +5,186 @@
 # Requires: curl and xmllint (included with macOS)
 # API role: Read - Computer Configuration Profiles
 #
-# Script version: 1.0.0
+# Script version: 2.0.0
 # Rule-set version: macOS-27.2026-09-17
 # Last reviewed: 2026-09-17
+#
+# Usage:
+# - Environment: choose prod or dev with JAMF_ENV, or the SCRIPT_JAMF_ENV value
+#   below, or answer the prompt. Choosing prod shows a warning and requires
+#   typing PROD (the audit itself is read-only).
+# - Values are taken in this order: environment variable, script default, the
+#   plist com.karthikmac.macadminstoolkit (keys ProdServerURL/DevServerURL,
+#   ProdAPIClientID/DevAPIClientID, ProdAPIClientSecret/DevAPIClientSecret;
+#   plain text, keep it chmod 600), then a prompt (client ID and secret are
+#   entered with no echo). See the main README for the shared configuration.
+# - Lines 2-3 of the output show the environment and where each setting came
+#   from (never the values).
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_NAME="jamf-macos-profile-deprecation-audit.sh"
+SCRIPT_VERSION="2.0.0"
 RULESET_VERSION="macOS-27.2026-09-17"
 
 set -euo pipefail
 umask 077
 
-# Environment variables override these values. Keep committed secrets empty.
-SCRIPT_JAMF_URL="https://karthikeyan.jamfcloud.com"
-SCRIPT_JAMF_CLIENT_ID="your-api-client-id"
-SCRIPT_JAMF_CLIENT_SECRET=""
+# First line of output identifies the script and version.
+echo "$SCRIPT_NAME - $SCRIPT_VERSION"
 
-JAMF_URL="${JAMF_URL:-$SCRIPT_JAMF_URL}"
-JAMF_CLIENT_ID="${JAMF_CLIENT_ID:-$SCRIPT_JAMF_CLIENT_ID}"
-JAMF_CLIENT_SECRET="${JAMF_CLIENT_SECRET:-$SCRIPT_JAMF_CLIENT_SECRET}"
+# Value order: environment variable, then these script defaults, then the
+# preference domain below, then (for anything still empty) an interactive
+# prompt. Keep secrets out of this file.
+SCRIPT_JAMF_ENV=""    # prod | dev ; empty = ask (JAMF_ENV overrides)
+SCRIPT_JAMF_URL=""    # e.g. https://yourorg.jamfcloud.com
+
+# Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
+# Shared keys are documented in the main README. DRY_RUN is deliberately NOT
+# read from it, so a stored value can never turn a dry run into a real run.
+PREF_DOMAIN="com.karthikmac.macadminstoolkit"
+
+# --- Select the environment (prod or dev) ------------------------------------
+# JAMF_ENV (environment variable), then SCRIPT_JAMF_ENV, then a prompt. Never
+# defaulted silently: with no choice on a non-interactive run, the script stops.
+ENV_SOURCE="JAMF_ENV variable"
+JAMF_ENV="${JAMF_ENV:-}"
+if [[ -z "$JAMF_ENV" && -n "$SCRIPT_JAMF_ENV" ]]; then
+    JAMF_ENV="$SCRIPT_JAMF_ENV"
+    ENV_SOURCE="script default"
+fi
+if [[ -z "$JAMF_ENV" && -t 0 ]]; then
+    read -rp "Select environment (prod/dev): " JAMF_ENV
+    ENV_SOURCE="prompt"
+fi
+JAMF_ENV=$(printf '%s' "$JAMF_ENV" | tr '[:upper:]' '[:lower:]')
+case "$JAMF_ENV" in
+    prod) ENV_PREFIX="Prod" ;;
+    dev) ENV_PREFIX="Dev" ;;
+    "") echo "ERROR: Set JAMF_ENV to prod or dev." >&2; exit 1 ;;
+    *) echo "ERROR: JAMF_ENV must be prod or dev (got '$JAMF_ENV')." >&2; exit 1 ;;
+esac
+
+# Prints a preference value, or nothing if the domain or key does not exist.
+readPref() {
+    defaults read "$PREF_DOMAIN" "$1" 2>/dev/null || true
+}
+
+# loadSetting VAR PLIST_KEY [DEFAULT]
+# Keeps an exported value, else DEFAULT (if non-empty), else the plist value
+# (skipped when PLIST_KEY is empty). Records where each value came from (never
+# the value) in SETTING_SOURCES.
+SETTING_SOURCES=""
+loadSetting() {
+    local var="$1" key="$2" default="${3:-}" src="not set" value
+    # Make sure the variable exists (empty) so later "set -u" checks are safe.
+    printf -v "$var" '%s' "${!var:-}"
+    if [[ -n "${!var}" ]]; then
+        src="environment"
+    elif [[ -n "$default" ]]; then
+        printf -v "$var" '%s' "$default"
+        src="script default"
+    elif [[ -n "$key" ]]; then
+        value="$(readPref "$key")"
+        if [[ -n "$value" ]]; then
+            printf -v "$var" '%s' "$value"
+            src="plist"
+        fi
+    fi
+    SETTING_SOURCES+="$var=$src, "
+}
+
+loadSetting JAMF_URL "${ENV_PREFIX}ServerURL" "$SCRIPT_JAMF_URL"
+loadSetting JAMF_CLIENT_ID "${ENV_PREFIX}APIClientID"
+loadSetting JAMF_CLIENT_SECRET "${ENV_PREFIX}APIClientSecret"
 JAMF_URL="${JAMF_URL%/}"
 
-[[ "$JAMF_URL" != "https://karthikeyan.jamfcloud.com" ]] || {
-    echo "ERROR: Set JAMF_URL or replace the placeholder SCRIPT_JAMF_URL." >&2
-    exit 1
+# Lines 2-3: the environment, and where each setting is taken from (values are
+# never printed). If the environment was prompted for, that prompt comes first.
+ENV_LINE="Environment: $JAMF_ENV (from $ENV_SOURCE). Settings sources (order: environment, script default, plist $PREF_DOMAIN, then prompt if still empty):"
+SOURCES_LINE="  ${SETTING_SOURCES%, }"
+echo "$ENV_LINE"
+echo "$SOURCES_LINE"
+
+# The plist can hold credentials in plain text; warn if other users can read it.
+prefFile="$HOME/Library/Preferences/$PREF_DOMAIN.plist"
+if [[ -f "$prefFile" ]]; then
+    prefMode=$(stat -f '%Lp' "$prefFile")
+    if [[ "$prefMode" != "600" && "$prefMode" != "400" ]]; then
+        echo "WARNING: $prefFile is mode $prefMode and may hold credentials. Run: chmod 600 \"$prefFile\"" >&2
+    fi
+fi
+
+# --- Prompt for anything not supplied ----------------------------------------
+# Whatever is still empty after the environment, script defaults and plist is
+# prompted for. Prompts only happen on an interactive terminal; otherwise
+# validation below fails with a clear error. Secrets are read without echo.
+promptValue() {
+    local var="$1" label="$2" mode="${3:-}" value
+    [[ -z "${!var}" && -t 0 ]] || return 0
+    if [[ "$mode" == "secret" ]]; then
+        read -rsp "$label: " value
+        echo >&2
+    else
+        read -rp "$label: " value
+    fi
+    printf -v "$var" '%s' "$value"
 }
-[[ "$JAMF_CLIENT_ID" != "your-api-client-id" ]] || { echo "ERROR: Set SCRIPT_JAMF_CLIENT_ID." >&2; exit 1; }
+
+promptValue JAMF_URL "Jamf Pro URL (e.g. https://yourorg.jamfcloud.com)"
+JAMF_URL="${JAMF_URL%/}"
+promptValue JAMF_CLIENT_ID "API Client ID" secret
+promptValue JAMF_CLIENT_SECRET "API Client secret" secret
+
+# --- Input validation --------------------------------------------------------
+[[ -n "$JAMF_URL" ]] || { echo "ERROR: Set JAMF_URL (e.g. https://yourorg.jamfcloud.com)." >&2; exit 1; }
 [[ "$JAMF_URL" == https://* ]] || { echo "ERROR: JAMF_URL must start with https://" >&2; exit 1; }
+[[ -n "$JAMF_CLIENT_ID" ]] || { echo "ERROR: Set JAMF_CLIENT_ID." >&2; exit 1; }
+[[ -n "$JAMF_CLIENT_SECRET" ]] || { echo "ERROR: Set JAMF_CLIENT_SECRET." >&2; exit 1; }
 command -v curl >/dev/null || { echo "ERROR: curl is required." >&2; exit 1; }
 command -v xmllint >/dev/null || { echo "ERROR: xmllint is required." >&2; exit 1; }
 
-printf 'Jamf Pro URL: %s\n' "$JAMF_URL" >&2
+# This audit only reads from Jamf Pro.
+MAKES_CHANGES="no"
 
-# Prompt only for interactive runs when no secret was supplied.
-if [[ -z "${JAMF_CLIENT_SECRET:-}" ]]; then
-    [[ -t 0 ]] || { echo "ERROR: Set JAMF_CLIENT_SECRET for non-interactive execution." >&2; exit 1; }
-    read -r -s -p "Jamf API client secret: " JAMF_CLIENT_SECRET
-    printf '\n' >&2
+# --- Guard against a URL that belongs to the other environment ---------------
+# Compares the final JAMF_URL (from any source) with the plist URLs, so a stray
+# exported JAMF_URL can't send a "dev" run to production, or the reverse.
+normalizeUrl() {
+    printf '%s' "${1%/}" | tr '[:upper:]' '[:lower:]'
+}
+if [[ "$JAMF_ENV" == "prod" ]]; then otherPrefix="Dev"; else otherPrefix="Prod"; fi
+expectedUrl=$(normalizeUrl "$(readPref "${ENV_PREFIX}ServerURL")")
+otherUrl=$(normalizeUrl "$(readPref "${otherPrefix}ServerURL")")
+thisUrl=$(normalizeUrl "$JAMF_URL")
+if [[ -n "$expectedUrl" && "$thisUrl" != "$expectedUrl" ]]; then
+    echo "ERROR: Environment is $JAMF_ENV but JAMF_URL ($JAMF_URL) does not match ${ENV_PREFIX}ServerURL in the plist." >&2
+    echo "       Fix the plist, or unset the JAMF_URL variable so the plist value is used." >&2
+    exit 1
+elif [[ -z "$expectedUrl" && -n "$otherUrl" && "$thisUrl" == "$otherUrl" ]]; then
+    echo "ERROR: Environment is $JAMF_ENV but JAMF_URL ($JAMF_URL) is the ${otherPrefix} URL in the plist." >&2
+    exit 1
 fi
-[[ -n "$JAMF_CLIENT_SECRET" ]] || { echo "ERROR: Jamf API client secret cannot be empty." >&2; exit 1; }
+
+# --- Production warning and confirmation -------------------------------------
+if [[ "$JAMF_ENV" == "prod" ]]; then
+    {
+        echo
+        echo "################################################################"
+        echo "#  WARNING: YOU ARE TARGETING PRODUCTION"
+        echo "#  Server : $JAMF_URL"
+        echo "#  Account: API Client"
+        echo "#  READ-ONLY audit: nothing will be changed."
+        echo "################################################################"
+    } >&2
+    if [[ -t 0 ]]; then
+        read -rp "Type PROD to continue (anything else cancels): " confirmProd
+        [[ "$confirmProd" == "PROD" ]] || { echo "Cancelled. Nothing was changed."; exit 0; }
+    elif [[ "$MAKES_CHANGES" == "yes" && "${JAMF_PROD_CONFIRM:-}" != "PROD" ]]; then
+        echo "ERROR: A non-interactive production run that changes things requires JAMF_PROD_CONFIRM=PROD." >&2
+        exit 1
+    fi
+fi
+
+printf 'Jamf Pro URL: %s\n' "$JAMF_URL" >&2
 
 OUTPUT_DIR="${OUTPUT_DIR:-$PWD}"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/jamf-profile-deprecation-audit.XXXXXX")"
@@ -50,9 +192,21 @@ CSV_FILE="$OUTPUT_DIR/jamf-deprecated-mdm-audit.csv"
 SECRET_FILE="$WORK_DIR/client-secret"
 SUMMARY_FILE="$WORK_DIR/findings.tsv"
 REPORT_FILE=""
+AUTH_CONFIG=""
 
 cleanup() {
+    local http_status
     [[ -z "$REPORT_FILE" ]] || rm -f "$REPORT_FILE"
+    # Best-effort token invalidation on every exit path, success or failure.
+    if [[ -n "$AUTH_CONFIG" && -f "$AUTH_CONFIG" ]]; then
+        http_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --config "$AUTH_CONFIG" --request POST "$JAMF_URL/api/v1/auth/invalidate-token" || echo "000")"
+        case "$http_status" in
+            204) printf 'Token invalidated.\n' >&2 ;;
+            401) printf 'Token already invalid.\n' >&2 ;;
+            *) printf 'WARNING: Unexpected response invalidating token: HTTP %s\n' "$http_status" >&2 ;;
+        esac
+    fi
     rm -rf "$WORK_DIR"
 }
 trap cleanup EXIT

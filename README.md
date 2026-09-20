@@ -45,6 +45,62 @@ Browse to the required tool or script and review its documentation before use.
 
 ---
 
+## Tools
+
+| Tool | Purpose | Runs |
+|---|---|---|
+| [Jamf-Pro-ScopeMap-API-Role](Jamf-Pro-ScopeMap-API-Role/) | Creates the read-only Jamf Pro API Role that ScopeMap needs | Admin Mac |
+| [Jamf-Pro-Delete-Devices](Jamf-Pro-Delete-Devices/) | Deletes computer or mobile device records by serial number | Admin Mac |
+| [JAMF-macOS-Profile-Deprecation-Audit](JAMF-macOS-Profile-Deprecation-Audit/) | Read-only audit of configuration profiles for macOS 27 deprecations | Admin Mac |
+| [Jamf-Pro-Recovery-Lock-API](Jamf-Pro-Recovery-Lock-API/) | Sets or clears Recovery Lock through the Jamf Pro API | Managed Mac, Jamf policy |
+| [Jamf-Pro-Slack-Notifications](Jamf-Pro-Slack-Notifications/) | Sends a Slack message from a Jamf policy | Managed Mac, Jamf policy |
+| [TCC-Audit](TCC-Audit/) | Read-only audit of TCC privacy records | Mac |
+
+---
+
+## Jamf Pro API tools: shared configuration
+
+Applies to the Jamf Pro API tools above. Those marked **Admin Mac** run from a terminal, not from a Jamf policy, and do not use Jamf policy parameters. `Jamf-Pro-Recovery-Lock-API` runs from a Jamf policy and uses the same plist and keys, with unattended differences described in its README (environment as policy parameter 5, no typed `PROD`). `Jamf-Pro-Slack-Notifications` has its own configuration.
+
+**Where values come from**, highest priority first:
+
+1. Environment variable
+2. Script default (the `SCRIPT_*` variables at the top of the script)
+3. Optional plist `com.karthikmac.macadminstoolkit`
+4. A prompt for anything still missing. Client ID, client secret and passwords are entered with no echo, so nothing is shown when pasted. Non-interactive runs stop with an error instead.
+
+**Environment.** Choose `prod` or `dev` with `JAMF_ENV`, then the `SCRIPT_JAMF_ENV` value in the script, then a prompt. It is never chosen silently.
+
+**Production guard.** Choosing `prod` shows a clear warning (server, account, what will happen) and requires typing `PROD` to continue, even for read-only tools. A non-interactive prod run that changes things also needs `JAMF_PROD_CONFIRM=PROD`.
+
+**URL guard.** The script stops before authenticating if the URL is the other environment's URL in the plist, or differs from the selected environment's URL in the plist.
+
+**Safe by default.** Tools that change Jamf Pro start with `DRY_RUN=yes` (report only). Set `DRY_RUN=no` for a real run. `DRY_RUN` is only read from the environment, never from the plist.
+
+**Output.** Line 1 is `script name - version`. Lines 2-3 show the environment and where each setting came from (`environment`, `script default`, `plist` or `not set`), never the values.
+
+### Optional plist
+
+Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.macadminstoolkit.plist`). The selected environment decides which keys are read:
+
+| Environment variable | Dev key | Prod key |
+|---|---|---|
+| `JAMF_URL` | `DevServerURL` | `ProdServerURL` |
+| `JAMF_CLIENT_ID` | `DevAPIClientID` | `ProdAPIClientID` |
+| `JAMF_CLIENT_SECRET` | `DevAPIClientSecret` | `ProdAPIClientSecret` |
+| `JAMF_USER` (tools that use an admin account) | `DevAdminUsername` | `ProdAdminUsername` |
+| `JAMF_PASS` (tools that use an admin account) | `DevAdminPassword` | `ProdAdminPassword` |
+
+```bash
+defaults write com.karthikmac.macadminstoolkit DevServerURL -string "https://dev.jamfcloud.com"
+defaults write com.karthikmac.macadminstoolkit DevAPIClientID -string "your-api-client-id"
+chmod 600 ~/Library/Preferences/com.karthikmac.macadminstoolkit.plist
+```
+
+**The plist is plain text.** Use it on admin Macs only and keep it `chmod 600` (the tools warn if it is more open). Never commit it. Consider leaving the `Prod` secrets out so prod always prompts. A tool's own settings are listed in that tool's README.
+
+---
+
 ## Usage
 
 Scripts may be used directly on macOS or deployed through an MDM platform, depending on their purpose.
