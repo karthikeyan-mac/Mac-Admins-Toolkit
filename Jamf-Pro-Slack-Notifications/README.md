@@ -104,7 +104,7 @@ Started" then "Workflow Completed") produces one Slack message per stage:
 > **Note:** this screenshot predates the current script and shows "Serial
 > Number: …" / "Status: …" labels in front of each value. The script no
 > longer adds those labels — message lines now render as plain bold text with
-> no prefix, so a message built the same way today would show `H95WP6THR6`
+> no prefix, so a message built the same way today would show `C02XXXXXXXXX`
 > and `Workflow Started` on their own lines. See the note under the
 > [Jamf Pro configuration](#jamf-pro-configuration) table if you want to add a
 > label back yourself.
