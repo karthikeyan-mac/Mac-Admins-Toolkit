@@ -51,6 +51,8 @@ Browse to the required tool or script and review its documentation before use.
 |---|---|---|
 | [Jamf-Pro-ScopeMap-API-Role](Jamf-Pro-ScopeMap-API-Role/) | Creates the read-only Jamf Pro API Role that ScopeMap needs | Admin Mac |
 | [Jamf-Pro-Delete-Devices](Jamf-Pro-Delete-Devices/) | Deletes computer or mobile device records by serial number | Admin Mac |
+| [Jamf-Pro-Delete-All-Computer-Groups](Jamf-Pro-Delete-All-Computer-Groups/) | Deletes all smart and/or static computer groups (optional exclude list, backup first) | Admin Mac |
+| [Jamf-Pro-Managed-Status](Jamf-Pro-Managed-Status/) | Sets the managed status of computers by serial number | Admin Mac |
 | [JAMF-macOS-Profile-Deprecation-Audit](JAMF-macOS-Profile-Deprecation-Audit/) | Read-only audit of configuration profiles for macOS 27 deprecations | Admin Mac |
 | [Jamf-Pro-Recovery-Lock-API](Jamf-Pro-Recovery-Lock-API/) | Sets or clears Recovery Lock through the Jamf Pro API | Managed Mac, Jamf policy |
 | [Jamf-Pro-Slack-Notifications](Jamf-Pro-Slack-Notifications/) | Sends a Slack message from a Jamf policy | Managed Mac, Jamf policy |
@@ -81,19 +83,58 @@ Applies to the Jamf Pro API tools above. Those marked **Admin Mac** run from a t
 
 ### Optional plist
 
-Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.macadminstoolkit.plist`). The selected environment decides which keys are read:
+Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.macadminstoolkit.plist`). The selected environment decides which keys are read: `Dev` keys for `dev`, `Prod` keys for `prod`.
+
+**Per-environment keys**
 
 | Environment variable | Dev key | Prod key |
 |---|---|---|
 | `JAMF_URL` | `DevServerURL` | `ProdServerURL` |
 | `JAMF_CLIENT_ID` | `DevAPIClientID` | `ProdAPIClientID` |
 | `JAMF_CLIENT_SECRET` | `DevAPIClientSecret` | `ProdAPIClientSecret` |
-| `JAMF_USER` (tools that use an admin account) | `DevAdminUsername` | `ProdAdminUsername` |
-| `JAMF_PASS` (tools that use an admin account) | `DevAdminPassword` | `ProdAdminPassword` |
+| `JAMF_USER` | `DevAdminUsername` | `ProdAdminUsername` |
+| `JAMF_PASS` | `DevAdminPassword` | `ProdAdminPassword` |
+
+**Tool-specific keys** (same for both environments, prefixed with the tool name)
+
+| Tool | Environment variable | Key |
+|---|---|---|
+| Jamf-Pro-ScopeMap-API-Role | `ROLE_NAME` | `ScopeMapRoleName` |
+| Jamf-Pro-ScopeMap-API-Role | `CREATE_CLIENT` | `ScopeMapCreateClient` |
+
+**Which tool reads which keys**
+
+| Tool | Keys read |
+|---|---|
+| Jamf-Pro-ScopeMap-API-Role | `ServerURL`, `AdminUsername`, `AdminPassword`, `APIClientID`, `APIClientSecret`, `ScopeMapRoleName`, `ScopeMapCreateClient` |
+| Jamf-Pro-Delete-Devices | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Delete-All-Computer-Groups | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Managed-Status | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| JAMF-macOS-Profile-Deprecation-Audit | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Recovery-Lock-API | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Slack-Notifications | none |
+
+(The `Dev`/`Prod` prefix applies to the per-environment keys only.)
+
+**Never read from the plist**
+
+- `JAMF_ENV` and `DRY_RUN`, so a stored value can never pick the environment or turn a dry run into a real run.
+- `JAMF_PROD_CONFIRM` and `JAMF_DELETE_CONFIRM`, the typed confirmations.
+- Each tool's other options (for example `DEVICE_TYPE`, `SERIAL_LIST`, `LOG_FILE`, `GROUP_TYPE`, `EXCLUDE_LIST`, `BACKUP_DIR`, `MANAGED_VALUE`). Set these with an environment variable or the script default. Each tool's README lists them.
+
+**Example**
 
 ```bash
+# Dev: URL and API Client
 defaults write com.karthikmac.macadminstoolkit DevServerURL -string "https://dev.jamfcloud.com"
 defaults write com.karthikmac.macadminstoolkit DevAPIClientID -string "your-api-client-id"
+defaults write com.karthikmac.macadminstoolkit DevAPIClientSecret -string "your-api-client-secret"
+
+# Prod: URL and client ID only; leave the secret out so prod prompts for it
+defaults write com.karthikmac.macadminstoolkit ProdServerURL -string "https://prod.jamfcloud.com"
+defaults write com.karthikmac.macadminstoolkit ProdAPIClientID -string "your-prod-api-client-id"
+
+# Keep the file private
 chmod 600 ~/Library/Preferences/com.karthikmac.macadminstoolkit.plist
 ```
 
