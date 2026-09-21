@@ -51,7 +51,8 @@ Browse to the required tool or script and review its documentation before use.
 |---|---|---|
 | [Jamf-Pro-ScopeMap-API-Role](Jamf-Pro-ScopeMap-API-Role/) | Creates the read-only Jamf Pro API Role that ScopeMap needs | Admin Mac |
 | [Jamf-Pro-Delete-Devices](Jamf-Pro-Delete-Devices/) | Deletes computer or mobile device records by serial number | Admin Mac |
-| [Jamf-Pro-Delete-All-Computer-Groups](Jamf-Pro-Delete-All-Computer-Groups/) | Deletes all smart and/or static computer groups (optional exclude list, backup first) | Admin Mac |
+| [Jamf-Pro-Delete-All-Computer-Groups](Jamf-Pro-Delete-All-Computer-Groups/) | Deletes all smart and/or static computer groups (optional exclude list, backup first), and restores them from the backup | Admin Mac |
+| [Jamf-Pro-Delete-All-macOS-Config-Profiles](Jamf-Pro-Delete-All-macOS-Config-Profiles/) | Deletes all macOS configuration profiles (optional exclude list, backup first), and restores them from the backup | Admin Mac |
 | [Jamf-Pro-Managed-Status](Jamf-Pro-Managed-Status/) | Sets the managed status of computers by serial number | Admin Mac |
 | [JAMF-macOS-Profile-Deprecation-Audit](JAMF-macOS-Profile-Deprecation-Audit/) | Read-only audit of configuration profiles for macOS 27 deprecations | Admin Mac |
 | [Jamf-Pro-Recovery-Lock-API](Jamf-Pro-Recovery-Lock-API/) | Sets or clears Recovery Lock through the Jamf Pro API | Managed Mac, Jamf policy |
@@ -109,6 +110,7 @@ Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.
 | Jamf-Pro-ScopeMap-API-Role | `ServerURL`, `AdminUsername`, `AdminPassword`, `APIClientID`, `APIClientSecret`, `ScopeMapRoleName`, `ScopeMapCreateClient` |
 | Jamf-Pro-Delete-Devices | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Delete-All-Computer-Groups | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Delete-All-macOS-Config-Profiles | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Managed-Status | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | JAMF-macOS-Profile-Deprecation-Audit | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Recovery-Lock-API | `ServerURL`, `APIClientID`, `APIClientSecret` |
@@ -119,7 +121,7 @@ Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.
 **Never read from the plist**
 
 - `JAMF_ENV` and `DRY_RUN`, so a stored value can never pick the environment or turn a dry run into a real run.
-- `JAMF_PROD_CONFIRM` and `JAMF_DELETE_CONFIRM`, the typed confirmations.
+- `JAMF_PROD_CONFIRM`, `JAMF_DELETE_CONFIRM` and `JAMF_RESTORE_CONFIRM`, the typed confirmations.
 - Each tool's other options (for example `DEVICE_TYPE`, `SERIAL_LIST`, `LOG_FILE`, `GROUP_TYPE`, `EXCLUDE_LIST`, `BACKUP_DIR`, `MANAGED_VALUE`). Set these with an environment variable or the script default. Each tool's README lists them.
 
 **Example**
