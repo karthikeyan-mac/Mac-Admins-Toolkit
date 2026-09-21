@@ -457,7 +457,7 @@ if [[ "$CREATE_CLIENT" == "yes" ]]; then
 		echo "   Jamf Pro first if you need a new one.)"
 	else
 		client_body=$(jq -n --arg n "$ROLE_NAME" \
-			'{displayName: $n, enabled: true, accessTokenLifetimeSeconds: 1800, authorizationScopes: [$n]}')
+			'{displayName: $n, enabled: true, accessTokenLifetimeSeconds: 180, authorizationScopes: [$n]}')
 		client=$(api POST "/api/v1/api-integrations" "$client_body")
 		int_id=$(jq -r '.id' <<<"$client")
 		client_id=$(jq -r '.clientId' <<<"$client")
