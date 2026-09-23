@@ -59,6 +59,7 @@ Browse to the required tool or script and review its documentation before use.
 | [Jamf-Pro-Recovery-Lock-API](Jamf-Pro-Recovery-Lock-API/) | Sets or clears Recovery Lock through the Jamf Pro API | Managed Mac, Jamf policy |
 | [Jamf-Pro-Slack-Notifications](Jamf-Pro-Slack-Notifications/) | Sends a Slack message from a Jamf policy | Managed Mac, Jamf policy |
 | [TCC-Audit](TCC-Audit/) | Read-only audit of TCC privacy records | Mac |
+| [Check-Dock-Status](Check-Dock-Status/) | Waits until the Dock is running, then runs your commands | Mac |
 
 ---
 
