@@ -60,6 +60,7 @@ Browse to the required tool or script and review its documentation before use.
 | [Jamf-Pro-Slack-Notifications](Jamf-Pro-Slack-Notifications/) | Sends a Slack message from a Jamf policy | Managed Mac, Jamf policy |
 | [TCC-Audit](TCC-Audit/) | Read-only audit of TCC privacy records | Mac |
 | [Check-Dock-Status](Check-Dock-Status/) | Waits until the Dock is running, then runs your commands | Mac |
+| [Set-Computer-Name](Set-Computer-Name/) | Sets the Mac's name to model and serial number, or serial number only | Mac |
 
 ---
 
