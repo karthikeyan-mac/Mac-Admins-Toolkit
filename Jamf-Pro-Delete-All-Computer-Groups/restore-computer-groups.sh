@@ -74,7 +74,7 @@ SCRIPT_JAMF_ENV=""                                        # prod | dev ; empty =
 SCRIPT_JAMF_URL=""                                        # e.g. https://yourorg.jamfcloud.com
 SCRIPT_RESTORE_PATH=""                                    # backup folder or one .json file; empty = ask
 SCRIPT_LOG_FILE="$HOME/Library/Logs/jamf_restore_computer_groups.log"
-SCRIPT_DRY_RUN="yes"                                      # yes = report only, create nothing
+SCRIPT_DRY_RUN="no"                                      # yes = report only, create nothing
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
 # Shared keys are documented in the main README. DRY_RUN is deliberately NOT

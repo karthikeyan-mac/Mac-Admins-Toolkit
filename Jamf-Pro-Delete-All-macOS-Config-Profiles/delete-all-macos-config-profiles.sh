@@ -77,10 +77,10 @@ echo "$BANNER"
 # prompt. Keep secrets out of this file.
 SCRIPT_JAMF_ENV=""                                        # prod | dev ; empty = ask (JAMF_ENV overrides)
 SCRIPT_JAMF_URL=""                                        # e.g. https://yourorg.jamfcloud.com
-SCRIPT_EXCLUDE_LIST=""                                    # optional file: profile IDs or exact names to keep, one per line
+SCRIPT_EXCLUDE_LIST="$HOME/Desktop/config_exlusions.txt"                                    # optional file: profile IDs or exact names to keep, one per line
 SCRIPT_BACKUP_DIR="$HOME/Library/Logs/jamf_delete_macos_config_profiles_backup"
 SCRIPT_LOG_FILE="$HOME/Library/Logs/jamf_delete_macos_config_profiles.log"
-SCRIPT_DRY_RUN="yes"                                      # yes = report only, delete nothing
+SCRIPT_DRY_RUN="no"                                      # yes = report only, delete nothing
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
 # Shared keys are documented in the main README. DRY_RUN is deliberately NOT

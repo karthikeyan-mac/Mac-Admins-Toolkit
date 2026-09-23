@@ -83,7 +83,7 @@ SCRIPT_GROUP_TYPE="all"                                   # "smart", "static" or
 SCRIPT_EXCLUDE_LIST=""                                    # optional file: group IDs or exact names to keep, one per line
 SCRIPT_BACKUP_DIR="$HOME/Library/Logs/jamf_delete_computer_groups_backup"
 SCRIPT_LOG_FILE="$HOME/Library/Logs/jamf_delete_computer_groups.log"
-SCRIPT_DRY_RUN="yes"                                      # yes = report only, delete nothing
+SCRIPT_DRY_RUN="no"                                      # yes = report only, delete nothing
 
 # Shared toolkit preference domain (~/Library/Preferences/<domain>.plist).
 # Shared keys are documented in the main README. DRY_RUN is deliberately NOT
