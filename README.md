@@ -52,6 +52,7 @@ Browse to the required tool or script and review its documentation before use.
 | [Jamf-Pro-ScopeMap-API-Role](Jamf-Pro-ScopeMap-API-Role/) | Creates the read-only Jamf Pro API Role that ScopeMap needs | Admin Mac |
 | [Jamf-Pro-Delete-Devices](Jamf-Pro-Delete-Devices/) | Deletes computer or mobile device records by serial number | Admin Mac |
 | [Jamf-Pro-Delete-All-Computer-Groups](Jamf-Pro-Delete-All-Computer-Groups/) | Deletes all smart and/or static computer groups (optional exclude list, backup first), and restores them from the backup | Admin Mac |
+| [Jamf-Pro-Delete-All-Advanced-Computer-Searches](Jamf-Pro-Delete-All-Advanced-Computer-Searches/) | Deletes all advanced computer searches (optional exclude list, backup first), and restores them from the backup | Admin Mac |
 | [Jamf-Pro-Delete-All-macOS-Config-Profiles](Jamf-Pro-Delete-All-macOS-Config-Profiles/) | Deletes all macOS configuration profiles (optional exclude list, backup first), and restores them from the backup | Admin Mac |
 | [Jamf-Pro-Managed-Status](Jamf-Pro-Managed-Status/) | Sets the managed status of computers by serial number | Admin Mac |
 | [JAMF-macOS-Profile-Deprecation-Audit](JAMF-macOS-Profile-Deprecation-Audit/) | Read-only audit of configuration profiles for macOS 27 deprecations | Admin Mac |
@@ -110,6 +111,7 @@ Created by a Jamf admin on the admin Mac (`~/Library/Preferences/com.karthikmac.
 | Jamf-Pro-ScopeMap-API-Role | `ServerURL`, `AdminUsername`, `AdminPassword`, `APIClientID`, `APIClientSecret`, `ScopeMapRoleName`, `ScopeMapCreateClient` |
 | Jamf-Pro-Delete-Devices | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Delete-All-Computer-Groups | `ServerURL`, `APIClientID`, `APIClientSecret` |
+| Jamf-Pro-Delete-All-Advanced-Computer-Searches | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Delete-All-macOS-Config-Profiles | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | Jamf-Pro-Managed-Status | `ServerURL`, `APIClientID`, `APIClientSecret` |
 | JAMF-macOS-Profile-Deprecation-Audit | `ServerURL`, `APIClientID`, `APIClientSecret` |
