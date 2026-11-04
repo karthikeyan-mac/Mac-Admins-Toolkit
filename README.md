@@ -61,6 +61,7 @@ Browse to the required tool or script and review its documentation before use.
 | [TCC-Audit](TCC-Audit/) | Read-only audit of TCC privacy records | Mac |
 | [Check-Dock-Status](Check-Dock-Status/) | Waits until the Dock is running, then runs your commands | Mac |
 | [Set-Computer-Name](Set-Computer-Name/) | Sets the Mac's name to model and serial number, or serial number only | Mac |
+| [Jamf-Pro-EA-Mac-Admins-Python-Version](Jamf-Pro-EA-Mac-Admins-Python-Version/) | Jamf Pro Extension Attribute: reports the Mac Admins Python version or "Not Installed" | Mac, Jamf EA |
 
 ---
 
