@@ -27,6 +27,16 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 
 **Apple Silicon only.** For an Intel Mac nothing is changed, and the window points to your own procedure (parameter 7).
 
+## Screenshots
+
+| Enter the serial number | Check the Mac and confirm |
+|:--:|:--:|
+| ![Serial number window](screenshots/Home.png) | ![Confirm window](screenshots/Confirm.png) |
+
+| Progress | Result |
+|:--:|:--:|
+| ![Progress window](screenshots/Progress.png) | ![Done window](screenshots/Done.png) |
+
 ## Quick start
 
 1. In Jamf Pro, create an API role with the four privileges in [Requirements](#requirements) and an API client that uses it.
@@ -34,10 +44,11 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 3. Create a policy with the script. Trigger: **Self Service** only. Frequency: **Ongoing**.
 4. Set parameters 4, 5 and 6 (Jamf URL, client ID, client secret). Keep `SCRIPT_DRY_RUN="yes"` in the script for now. Leave `SCRIPT_CLEAR_RECOVERY_LOCK` and `SCRIPT_ERASE_DEVICE` at `yes`, or set one to `no` for a single-purpose policy (for example, one policy that only clears Recovery Lock).
 5. Scope the policy to the admin and technician Macs **and** limit it to their user group. This access is the main control, because the policy can erase any Apple Silicon Mac in Jamf Pro.
-6. Test on a spare Mac (see [Testing](#testing)), then set `SCRIPT_DRY_RUN="no"` in the script.
+6. **Test in a Jamf Pro sandbox (non-production) first**, on a spare Mac (see [Testing](#testing)). Only after it works there, set `SCRIPT_DRY_RUN="no"` and use it in production.
 
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Requirements](#requirements)
 - [How a run works](#how-a-run-works)
 - [Safety controls](#safety-controls)
@@ -198,7 +209,7 @@ The header names the action (Recovery Lock and Erase, Recovery Lock clear, or Er
 
 ## Testing
 
-`bash -n` and ShellCheck pass. The script was exercised end to end against a mocked Jamf and a mocked swiftDialog, and swiftDialog `--timer` and exit-code behaviour was checked on 3.1.1. **It has not been run against a real Jamf Pro tenant, and the window layout (tables, info boxes) has not been confirmed on screen.** Test before use:
+`bash -n` and ShellCheck pass. The script was exercised end to end against a mocked Jamf and a mocked swiftDialog, and swiftDialog `--timer` and exit-code behaviour was checked on 3.1.1. **It has not been run against a real Jamf Pro tenant, and the window layout (tables, info boxes) has not been confirmed on screen.** **Test in a Jamf Pro sandbox (non-production) tenant before you use it in production.** Test before use:
 
 0. Set both new variables to `no`: confirm the script stops with the "Nothing to do" error and sends nothing. This was checked with a stubbed swiftDialog, along with the first window text for each mode. The later windows, the progress flow and Slack in the Recovery Lock only and erase only modes have **not** been run.
 1. Dry run (`SCRIPT_DRY_RUN="yes"`): check the details table and the log file. Repeat for each mode you will use.
@@ -218,8 +229,6 @@ All calls go to your Jamf Pro URL.
 | `POST /api/v2/mdm/commands` | Sends the `SET_RECOVERY_LOCK` command (empty password) and/or the `ERASE_DEVICE` command, depending on the mode | Send Set Recovery Lock Command, Send Computer Remote Wipe Command |
 | `GET /api/v2/mdm/commands` | Checks the state of the Recovery Lock command (Pending, Acknowledged, Error). Not used for erase only. | View MDM command information in Jamf Pro API |
 | `POST /api/v1/auth/invalidate-token` | Ends the token at the end of the run | None |
-
-Checked against developer.jamf.com on 2026-11-11: `computers-inventory` v4 is current (v1-v3 are deprecated in favour of v4), and `general.remoteManagement.managed` is a boolean in v4. The `mdm/commands` v2 and `invalidate-token` v1 endpoints are not deprecated. `/api/oauth/token` was not checked.
 
 ## Limitations
 
