@@ -31,11 +31,11 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 
 | Enter the serial number | Check the Mac and confirm |
 |:--:|:--:|
-| ![Serial number window](screenshots/Home.png) | ![Confirm window](screenshots/Confirm.png) |
+| ![Serial number window](screenshots/1_Home.png) | ![Confirm window](screenshots/2_Confirm.png) |
 
 | Progress | Result |
 |:--:|:--:|
-| ![Progress window](screenshots/Progress.png) | ![Done window](screenshots/Done.png) |
+| ![Progress window](screenshots/3_Progress.png) | ![Done window](screenshots/4_Done.png) |
 
 ## Quick start
 
