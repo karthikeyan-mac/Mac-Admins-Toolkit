@@ -57,6 +57,7 @@ Browse to the required tool or script and review its documentation before use.
 | [Jamf-Pro-Managed-Status](Jamf-Pro-Managed-Status/) | Sets the managed status of computers by serial number | Admin Mac |
 | [JAMF-macOS-Profile-Deprecation-Audit](JAMF-macOS-Profile-Deprecation-Audit/) | Read-only audit of configuration profiles for macOS 27 deprecations | Admin Mac |
 | [Jamf-Pro-Recovery-Lock-API](Jamf-Pro-Recovery-Lock-API/) | Sets or clears Recovery Lock through the Jamf Pro API | Managed Mac, Jamf policy |
+| [Jamf-Pro-Recovery-Lock-Clear-and-Erase](Jamf-Pro-Recovery-Lock-Clear-and-Erase/) | Self Service script that clears Recovery Lock, then erases an Apple Silicon Mac chosen by serial number, from an admin's or tech's Mac | Managed Mac, Jamf policy |
 | [Jamf-Pro-Slack-Notifications](Jamf-Pro-Slack-Notifications/) | Sends a Slack message from a Jamf policy | Managed Mac, Jamf policy |
 | [TCC-Audit](TCC-Audit/) | Read-only audit of TCC privacy records | Mac |
 | [Check-Dock-Status](Check-Dock-Status/) | Waits until the Dock is running, then runs your commands | Mac |
@@ -67,7 +68,7 @@ Browse to the required tool or script and review its documentation before use.
 
 ## Jamf Pro API tools: shared configuration
 
-Applies to the Jamf Pro API tools above. Those marked **Admin Mac** run from a terminal, not from a Jamf policy, and do not use Jamf policy parameters. `Jamf-Pro-Recovery-Lock-API` runs from a Jamf policy and uses the same plist and keys, with unattended differences described in its README (environment as policy parameter 5, no typed `PROD`). `Jamf-Pro-Slack-Notifications` has its own configuration.
+Applies to the Jamf Pro API tools above. Those marked **Admin Mac** run from a terminal, not from a Jamf policy, and do not use Jamf policy parameters. `Jamf-Pro-Recovery-Lock-API` runs from a Jamf policy and uses the same plist and keys, with unattended differences described in its README (environment as policy parameter 5, no typed `PROD`). `Jamf-Pro-Slack-Notifications` and `Jamf-Pro-Recovery-Lock-Clear-and-Erase` (policy parameters 4-8) have their own configuration.
 
 **Where values come from**, highest priority first:
 
