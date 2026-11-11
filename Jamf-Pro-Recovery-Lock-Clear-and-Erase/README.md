@@ -27,6 +27,16 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 
 **Apple Silicon only.** For an Intel Mac nothing is changed, and the window points to your own procedure (parameter 7).
 
+## Screenshots
+
+| Enter the serial number | Check the Mac and confirm |
+|:--:|:--:|
+| ![Serial number window](screenshots/Home.png) | ![Confirm window](screenshots/Confirm.png) |
+
+| Progress | Result |
+|:--:|:--:|
+| ![Progress window](screenshots/Progress.png) | ![Done window](screenshots/Done.png) |
+
 ## Quick start
 
 1. In Jamf Pro, create an API role with the four privileges in [Requirements](#requirements) and an API client that uses it.
@@ -38,6 +48,7 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Requirements](#requirements)
 - [How a run works](#how-a-run-works)
 - [Safety controls](#safety-controls)
