@@ -209,7 +209,7 @@ The header names the action (Recovery Lock and Erase, Recovery Lock clear, or Er
 
 ## Testing
 
-`bash -n` and ShellCheck pass. The script was exercised end to end against a mocked Jamf and a mocked swiftDialog, and swiftDialog `--timer` and exit-code behaviour was checked on 3.1.1. **It has not been run against a real Jamf Pro tenant, and the window layout (tables, info boxes) has not been confirmed on screen.** **Test in a Jamf Pro sandbox (non-production) tenant before you use it in production.** Test before use:
+**Test in a Jamf Pro sandbox (non-production) tenant before you use it in production.** Test before use:
 
 0. Set both new variables to `no`: confirm the script stops with the "Nothing to do" error and sends nothing. This was checked with a stubbed swiftDialog, along with the first window text for each mode. The later windows, the progress flow and Slack in the Recovery Lock only and erase only modes have **not** been run.
 1. Dry run (`SCRIPT_DRY_RUN="yes"`): check the details table and the log file. Repeat for each mode you will use.
