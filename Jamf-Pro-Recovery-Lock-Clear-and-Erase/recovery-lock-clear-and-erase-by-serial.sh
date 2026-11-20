@@ -18,6 +18,7 @@
 #   6  API client secret (shows in policy logs, use a limited role)
 #   7  Link to your Intel Mac article (optional)
 #   8  Slack webhook URL for alerts (optional, no URL = no alerts)
+#   9  Microsoft Teams webhook URL (optional, no URL = no alerts)
 # The dry run, clear Recovery Lock, erase, wait time, icon and obliterationBehavior are
 # script variables only.
 #
@@ -42,6 +43,7 @@ SCRIPT_INTEL_KB_URL=""    # parameter 7
 SCRIPT_WAIT_SECONDS="120" # seconds to wait before queuing the erase, 10-120
 SCRIPT_ICON=""            # icon: file path, https:// URL or SF=symbol
 SCRIPT_SLACK_WEBHOOK_URL=""  # parameter 8
+SCRIPT_TEAMS_WEBHOOK_URL=""  # parameter 9, not implemented yet
 SCRIPT_OBLITERATION="Default" # Default, DoNotObliterate, ObliterateWithWarning or Always (https://learn.jamf.com/r/en-US/technical-articles/Obliteration_Behavior)
 SCRIPT_CLEAR_RECOVERY_LOCK="yes" # yes or no: send the Clear Recovery Lock command
 SCRIPT_ERASE_DEVICE="yes"        # yes or no: send the erase command (both no = error)
@@ -68,6 +70,7 @@ ICON="$SCRIPT_ICON"
 ICON="${ICON:-info}"
 OBLITERATION="$SCRIPT_OBLITERATION"
 SLACK_URL="${8:-$SCRIPT_SLACK_WEBHOOK_URL}"
+TEAMS_URL="${9:-$SCRIPT_TEAMS_WEBHOOK_URL}"
 DO_LOCK="$SCRIPT_CLEAR_RECOVERY_LOCK"
 DO_ERASE="$SCRIPT_ERASE_DEVICE"
 
@@ -84,7 +87,7 @@ WIDTH=780
 POLL=15   # seconds between checks of the command state
 TICK=5    # seconds between progress window updates
 
-echo "Settings: policy parameters 4-8, else script variables (values not shown). DRY_RUN=$DRY_RUN, clear Recovery Lock=$DO_LOCK, erase=$DO_ERASE"
+echo "Settings: policy parameters 4-9, else script variables (values not shown). DRY_RUN=$DRY_RUN, clear Recovery Lock=$DO_LOCK, erase=$DO_ERASE"
 
 # --- Logged-in user and log file -------------------------------------------------
 # Policies run as root, so windows and the log file belong to the logged-in user.
@@ -141,6 +144,11 @@ log "Run started by $consoleUser on $(hostname) (serial ${techSerial:-unknown}),
 if [[ -n "$SLACK_URL" && ! "$SLACK_URL" =~ ^https://hooks\.(slack\.com|slack-gov\.com)/services/[^/]+/[^/]+/[^/]+$ ]]; then
 	log "WARNING: the Slack webhook URL is not valid, so there are no Slack alerts."
 	SLACK_URL=""
+fi
+# An invalid Teams webhook URL turns the alerts off; it does not stop the run.
+if [[ -n "$TEAMS_URL" && "$TEAMS_URL" != https://* ]]; then
+    log "WARNING: the Microsoft Teams webhook URL is not valid, so there are no Teams alerts."
+    TEAMS_URL=""
 fi
 
 WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/recovery-lock-erase.XXXXXX")
@@ -363,6 +371,124 @@ slackPost() {
 	fi
 }
 
+# teamsPost TITLE STATUS [PROBLEM]: posts one Adaptive Card through a
+# Microsoft Teams / Power Automate webhook. Best effort: a Teams problem
+# is logged and never stops or changes the run. The webhook URL goes to
+# curl through --config on stdin so it is not exposed in the process list.
+teamsPost() {
+    [[ -n "$TEAMS_URL" ]] || return 0
+
+    local title="$1"
+    local status="$2"
+    local problem="${3:-}"
+    local facts=""
+    local problemBlock=""
+    local payload=""
+
+    facts='[
+        {
+            "title": "Serial",
+            "value": "'"$(jsonEscape "$slackSerial")"'"
+        },
+        {
+            "title": "Computer name",
+            "value": "'"$(jsonEscape "$slackName")"'"
+        },
+        {
+            "title": "Model",
+            "value": "'"$(jsonEscape "$slackModel")"'"
+        },
+        {
+            "title": "Action",
+            "value": "'"$(jsonEscape "$slackAction")"'"
+        },
+        {
+            "title": "User",
+            "value": "'"$(jsonEscape "$slackUserName")"'"
+        },
+        {
+            "title": "Email",
+            "value": "'"$(jsonEscape "$slackEmail")"'"
+        }'
+
+    if [[ -n "$slackReason" ]]; then
+        facts+=',
+        {
+            "title": "Reason",
+            "value": "'"$(jsonEscape "$slackReason")"'"
+        }'
+    fi
+
+    facts+=',
+        {
+            "title": "Status",
+            "value": "'"$(jsonEscape "$status")"'"
+        }
+    ]'
+
+    if [[ -n "$problem" ]]; then
+        problemBlock=',
+        {
+            "type": "TextBlock",
+            "text": "**Problem**",
+            "weight": "Bolder",
+            "color": "Attention",
+            "spacing": "Medium",
+            "wrap": true
+        },
+        {
+            "type": "TextBlock",
+            "text": "'"$(jsonEscape "$problem")"'",
+            "color": "Attention",
+            "wrap": true
+        }'
+    fi
+
+    payload='{
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": null,
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "'"$(jsonEscape "$title")"'",
+                            "size": "Large",
+                            "weight": "Bolder",
+                            "wrap": true
+                        },
+                        {
+                            "type": "FactSet",
+                            "facts": '"$facts"'
+                        }'"$problemBlock"',
+                        {
+                            "type": "TextBlock",
+                            "text": "Triggered by **'"$(jsonEscape "$consoleUser")"'** from Mac '"$(jsonEscape "${techSerial:-unknown}")"' | '"$(jsonEscape "$SCRIPT_NAME")"' '"$(jsonEscape "$SCRIPT_VERSION")"'",
+                            "size": "Small",
+                            "isSubtle": true,
+                            "wrap": true,
+                            "spacing": "Medium"
+                        }
+                    ]
+                }
+            }
+        ]
+    }'
+
+    if printf 'url = "%s"\n' "$TEAMS_URL" |
+        curl --silent --fail --connect-timeout 5 --max-time 10 --config - -X POST -H 'Content-Type: application/json' --data "$payload" >/dev/null 2>&1; then
+
+        log "Microsoft Teams alert sent: $title"
+    else
+        log "WARNING: could not send the Microsoft Teams alert: $title"
+    fi
+}
+
 # plain MESSAGE: the message without window markup, for the logs and Slack.
 plain() { printf '%s' "${1//\\n/ }" | sed -E 's/:[a-z]+\[([^]]*)\]/\1/g; s/\*\*//g'; }
 
@@ -373,6 +499,7 @@ fail() {
 	if [[ "$slackRequested" == "yes" && "$slackDone" == "no" ]]; then
 		slackDone="yes"
 		slackPost "#FF0000" ":x:" "$ACTION_TITLE FAILED" "Failed" "$(plain "$1")"
+		teamsPost "$ACTION_TITLE FAILED" "Failed" "$(plain "$1")"
 	fi
 	stopProgress
 	WIN_TITLE="Something went wrong"
@@ -916,6 +1043,7 @@ if [[ "$DO_ERASE" == "no" ]]; then
 		log "RESULT: $serial - Recovery Lock cleared. The Mac was not erased (not requested)."
 		slackDone="yes"
 		slackPost "#008000" ":white_check_mark:" "Recovery Lock cleared" "Cleared"
+		teamsPost "Recovery Lock cleared" "Cleared"
 		dlgCmd "progress: 100"
 		dlgCmd "infobox: ### Result<br><br>**Recovery Lock:** cleared"
 		finishWindow "Done" info "**Recovery Lock was cleared.**\n\n$resultTable\n\nThe Mac was **not** erased.\n\nClick **Done** to close."
@@ -923,6 +1051,7 @@ if [[ "$DO_ERASE" == "no" ]]; then
 		log "RESULT: $serial - no reply within ${WAIT_SECONDS}s. Recovery Lock clear is queued in Jamf. The Mac was not erased (not requested)."
 		slackDone="yes"
 		slackPost "#FFA500" ":warning:" "Mac did not reply - Recovery Lock clear queued in Jamf" "Queued in Jamf. Sent when the Mac connects."
+		teamsPost "Mac did not reply - Recovery Lock clear queued in Jamf" "Queued in Jamf. Sent when the Mac connects."
 		dlgCmd "progress: 100"
 		dlgCmd "infobox: ### Result<br><br>**Recovery Lock:** :${WARN}[queued in Jamf]"
 		finishWindow "Queued - the Mac did not reply" caution "The Mac did not reply within ${waitText} (it may be offline).\n\n$resultTable\n\nThe **Clear Recovery Lock** command is :${WARN}[queued in Jamf]. Jamf sends it when the Mac connects to the internet. The Mac is **not** being erased.\n\nClick **Done** to close."
@@ -932,6 +1061,7 @@ elif [[ "$DO_LOCK" == "no" ]]; then
 	log "RESULT: $serial - erase command sent (Recovery Lock not touched). Reason: $reasonText."
 	slackDone="yes"
 	slackPost "#008000" ":white_check_mark:" "Device Wipe Command sent" "Device Wipe command sent"
+	teamsPost "Device Wipe Command sent" "Device Wipe command sent"
 	setStep "$STEP_ERASE" success "Command sent"
 	dlgCmd "infobox: ### Result<br><br>**Erase:** command sent"
 	finishWindow "Done" info "**The erase command was sent.**\n\n$resultTable\n\nRecovery Lock was not touched. The Mac will erase and restart. This can take a while.\n\n$asmNote\n\nClick **Done** to close."
@@ -939,6 +1069,7 @@ elif [[ "$rlConfirmed" == "yes" ]]; then
 	log "RESULT: $serial - Recovery Lock cleared, erase command sent. Reason: $reasonText."
 	slackDone="yes"
 	slackPost "#008000" ":white_check_mark:" "Recovery Lock cleared, Device Wipe Command sent" "Recovery Lock cleared, Device Wipe command sent"
+	teamsPost "Recovery Lock cleared, Device Wipe Command sent" "Recovery Lock cleared, Device Wipe command sent"
 	setStep "$STEP_ERASE" success "Command sent"
 	dlgCmd "infobox: ### Result<br><br>**Recovery Lock:** cleared<br><br>**Erase:** command sent"
 	finishWindow "Done" info "**Recovery Lock was cleared and the erase command was sent.**\n\n$resultTable\n\nThe Mac will erase and restart. This can take a while.\n\n$asmNote\n\nClick **Done** to close."
@@ -946,6 +1077,7 @@ else
 	log "RESULT: $serial - no reply within ${WAIT_SECONDS}s. Recovery Lock and erase are queued in Jamf. Reason: $reasonText."
 	slackDone="yes"
 	slackPost "#FFA500" ":warning:" "Mac did not reply - Recovery Lock and erase queued in Jamf" "Both commands queued in Jamf. Sent when the Mac connects."
+	teamsPost "Mac did not reply - Recovery Lock and erase queued in Jamf" "Both commands queued in Jamf. Sent when the Mac connects."
 	setStep "$STEP_ERASE" success "Queued in Jamf"
 	dlgCmd "infobox: ### Result<br><br>**Recovery Lock:** :${WARN}[queued in Jamf]<br><br>**Erase:** :${WARN}[queued in Jamf]"
 	finishWindow "Queued - the Mac did not reply" caution "The Mac did not reply within ${waitText} (it may be offline).\n\n$resultTable\n\nThe **Clear Recovery Lock** and **Erase** commands are :${WARN}[queued in Jamf]. Jamf sends them when the Mac connects to the internet.\n\n$asmNote\n\nClick **Done** to close."
