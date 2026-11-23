@@ -35,7 +35,7 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 
 | Progress | Result |
 |:--:|:--:|
-| ![Progress window](screenshots/3_Progress.png) | ![Done window](screenshots/4_Done.png) |
+| ![Progress window](screenshots/3_Progress.png) | ![Done window](screenshots/Done.png) |
 
 ## Quick start
 
