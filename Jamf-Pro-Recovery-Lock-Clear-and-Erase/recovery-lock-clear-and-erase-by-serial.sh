@@ -27,7 +27,7 @@
 # Needs a logged-in user and swiftDialog. The erase is permanent.
 
 SCRIPT_NAME="recovery-lock-clear-and-erase-by-serial.sh"
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 
 set -euo pipefail
 umask 077
@@ -43,7 +43,7 @@ SCRIPT_INTEL_KB_URL=""    # parameter 7
 SCRIPT_WAIT_SECONDS="120" # seconds to wait before queuing the erase, 10-120
 SCRIPT_ICON=""            # icon: file path, https:// URL or SF=symbol
 SCRIPT_SLACK_WEBHOOK_URL=""  # parameter 8
-SCRIPT_TEAMS_WEBHOOK_URL=""  # parameter 9, not implemented yet
+SCRIPT_TEAMS_WEBHOOK_URL=""  # parameter 9
 SCRIPT_OBLITERATION="Default" # Default, DoNotObliterate, ObliterateWithWarning or Always (https://learn.jamf.com/r/en-US/technical-articles/Obliteration_Behavior)
 SCRIPT_CLEAR_RECOVERY_LOCK="yes" # yes or no: send the Clear Recovery Lock command
 SCRIPT_ERASE_DEVICE="yes"        # yes or no: send the erase command (both no = error)

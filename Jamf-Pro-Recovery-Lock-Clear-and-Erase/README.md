@@ -1,6 +1,6 @@
 # Jamf Pro Recovery Lock Clear and Erase
 
-`recovery-lock-clear-and-erase-by-serial.sh` (version `1.0.0`) clears the Recovery Lock, erases, or does both, on an Apple Silicon Mac that is managed in Jamf Pro. Use it to reimage, retire or sell a Mac, or only to clear a Recovery Lock password.
+`recovery-lock-clear-and-erase-by-serial.sh` (version `1.1.0`) clears the Recovery Lock, erases, or does both, on an Apple Silicon Mac that is managed in Jamf Pro. Use it to reimage, retire or sell a Mac, or only to clear a Recovery Lock password.
 
 **It runs from an admin's or technician's own Mac, as a Jamf Self Service policy.** The admin or technician enters the **serial number of the Mac to erase**. The script does not run on the Mac being erased.
 
@@ -23,7 +23,7 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 4. Clears Recovery Lock with a Jamf MDM command and waits up to 2 minutes for the Mac to confirm. *(Skipped for erase only.)*
 5. Sends the erase command. If the Mac is offline, the erase is queued in Jamf behind the Recovery Lock command. *(Skipped for Recovery Lock only. For erase only it is sent straight away.)*
 6. Shows the result. Every window is swiftDialog, and each run is written to a log in `~/Library/Logs`.
-7. Optional: posts Slack alerts when an erase is requested and when it finishes or fails (parameter 8).
+7. Optional: posts a Slack (parameter 8) and/or Microsoft Teams (parameter 9) alert when the run finishes, is queued or fails.
 
 **Apple Silicon only.** For an Intel Mac nothing is changed, and the window points to your own procedure (parameter 7).
 
@@ -55,6 +55,7 @@ Any value other than `yes` or `no` is also an error. The steps below are for bot
 - [Configuration](#configuration)
 - [Logging](#logging)
 - [Slack alerts](#slack-alerts-optional)
+- [Microsoft Teams alerts](#microsoft-teams-alerts-optional)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
 - [Testing](#testing)
@@ -106,11 +107,12 @@ The reason list has two choices. **Reimage the device** needs no Apple School Ma
 | 6 | API Client secret | Visible in policy logs. Use a limited role and rotate if exposed. |
 | 7 | Intel Mac article URL | Optional. `https://` link behind the **More info** button. |
 | 8 | Slack webhook URL | Optional. Leave empty for no Slack alerts. See [Slack alerts](#slack-alerts-optional). |
+| 9 | Microsoft Teams webhook URL | Optional. Leave empty for no Teams alerts. See [Microsoft Teams alerts](#microsoft-teams-alerts-optional). |
 
 ### Adding the script in Jamf
 
 1. *Settings > Computer Management > Scripts > New*. Paste the script. Keep `SCRIPT_DRY_RUN="yes"` until you have tested.
-2. On the **Options** tab, give parameters 4 to 8 these labels. They are the names the policy shows.
+2. On the **Options** tab, give parameters 4 to 9 these labels. They are the names the policy shows.
 
 | Parameter | Label | Required |
 |---|---|---|
@@ -119,6 +121,7 @@ The reason list has two choices. **Reimage the device** needs no Apple School Ma
 | 6 | API Client Secret | Yes |
 | 7 | Intel Mac article URL | No |
 | 8 | Slack webhook URL | No |
+| 9 | Microsoft Teams webhook URL | No |
 
 3. In the policy, open **Scripts**, add the script and fill in the values:
 
@@ -129,10 +132,11 @@ The reason list has two choices. **Reimage the device** needs no Apple School Ma
 | 6 | `<api-client-secret>` |
 | 7 | `https://your-kb-site/intel-mac-article` or empty |
 | 8 | `https://hooks.slack.com/services/<T>/<B>/<token>` or empty |
+| 9 | `https://<your-teams-power-automate-webhook-url>` or empty |
 
-Use your own values, never the examples. Leave 7 and 8 empty to skip them. Parameters 9 and above are not used. Everything else (dry run, clear Recovery Lock, erase, wait time, icon) is set in the script, not in the policy.
+Use your own values, never the examples. Leave 7, 8 and 9 empty to skip them. Parameters 10 and above are not used. Everything else (dry run, clear Recovery Lock, erase, wait time, icon) is set in the script, not in the policy.
 
-Each parameter falls back to a `SCRIPT_` variable at the top of the script (`SCRIPT_JAMF_URL`, `SCRIPT_CLIENT_ID`, `SCRIPT_CLIENT_SECRET`, `SCRIPT_INTEL_KB_URL`, `SCRIPT_SLACK_WEBHOOK_URL`). A policy parameter wins when set. Prefer parameters for the URL, client ID and secret, and never commit a real secret.
+Each parameter falls back to a `SCRIPT_` variable at the top of the script (`SCRIPT_JAMF_URL`, `SCRIPT_CLIENT_ID`, `SCRIPT_CLIENT_SECRET`, `SCRIPT_INTEL_KB_URL`, `SCRIPT_SLACK_WEBHOOK_URL`, `SCRIPT_TEAMS_WEBHOOK_URL`). A policy parameter wins when set. Prefer parameters for the URL, client ID and secret, and never commit a real secret.
 
 ### Script variables
 
@@ -182,13 +186,22 @@ The header names the action (Recovery Lock and Erase, Recovery Lock clear, or Er
 - The messages contain a person's name and email. Use a channel whose members may see that.
 - The admin and technician Macs need network access to `hooks.slack.com` (or `hooks.slack-gov.com`).
 
+## Microsoft Teams alerts (optional)
+
+Set parameter 9 (or `SCRIPT_TEAMS_WEBHOOK_URL`) to a Microsoft Teams / Power Automate webhook URL (it must start with `https://`) and the script posts **one Adaptive Card per run** with the same details and status as the Slack alert (done, queued, or failed with a **Problem** line). With no URL, nothing is posted. Slack and Teams can be used together or on their own.
+
+- The alert is best effort. If Teams cannot be reached, the script logs a warning and carries on.
+- The webhook URL is a credential. It appears in policy logs, so rotate it if exposed. The script sends it to `curl` on stdin and never logs it.
+- The cards contain a person's name and email. Use a channel whose members may see that.
+- The admin and technician Macs need network access to your Teams / Power Automate webhook host.
+
 ## Security
 
 - **Least privilege:** the API role needs only the four privileges above. Do not reuse an administrator client.
 - **Secret handling:** the secret is sent from a private temp file (not the command line) and the token on stdin (not in the process list). The token is renewed at half its lifetime and invalidated at the end. Policy parameters appear in Jamf policy logs, so rotate the secret if it is exposed.
 - **Input:** the serial is limited to letters and digits before it is used in an API filter. Text from Jamf cannot break out of the window code.
 - **Who can run it:** control it with the policy scope and user groups.
-- **Slack webhook:** if you use alerts, treat the webhook URL like the secret (see [Slack alerts](#slack-alerts-optional)).
+- **Slack and Teams webhooks:** if you use alerts, treat the webhook URL like the secret (see [Slack alerts](#slack-alerts-optional) and [Microsoft Teams alerts](#microsoft-teams-alerts-optional)).
 - **After the erase:** the Mac returns unmanaged (no Return to Service). Activation Lock is not touched. Release the Mac from Apple School/Business Manager and delete it from Jamf Pro yourself. Release it before the erased Mac goes online, or it shows the enrolment prompt again.
 - **The erase is permanent.** Test on a non-production Mac first.
 
